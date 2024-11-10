@@ -18,12 +18,7 @@ import {
   getWishlist,
   saveAddress,
   verifyEmail,
-  userCart,
-  getCart,
   addToWishlist,
-  deleteCartItem,
-  createShippingAddress,
-  createEmptyWishlist,
   createAddress,
   updateAddress,
   getUserAddress,
@@ -39,8 +34,6 @@ import {  isUser, isAdmin } from '../Middlewares/authMiddleware.js'
 
 router.post("/register", createUser);
 router.post("/forgot-password-token", forgotPasswordToken);
-router.post("/cart/:userId", userCart)
-router.get("/getcart/:userId", getCart)
 router.put("/reset-password/:token", resetPassword);
 router.put("/password/:_id", isUser, updatePassword);
 router.post("/login", loginUser);
@@ -57,9 +50,6 @@ router.put("/unblock-user/:id", isAdmin,  unblockUser);
 router.post('/verify-otp', verifyEmail)
 router.post('/wishlist/:id', addToWishlist)
 router.delete('/remove-wishlist/:id', removeFromWishlist)
-router.delete('/delete-cart/:userId', deleteCartItem);
-router.post('/shipping-address/:userId', isUser, createShippingAddress)
-router.post('/empty-wishlist/:id', createEmptyWishlist)
 router.post('/create-address/:userId', createAddress)
 router.put('/update-address/:userId', updateAddress)
 router.get('/get-address/:userId', getUserAddress)

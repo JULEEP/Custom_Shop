@@ -8,7 +8,7 @@ import AddressModel from '../Model/Address.js'
 import validateMongoDbId from '../utils/validateMongodbId.js'
 import generateRefreshToken from '../config/refreshtoken.js'
 import ShippingAddressModel from '../Model/ShippingAdd.js'
-import {sendOTPVerification, resendOTPForUser}  from '../utils/common.js'
+import { sendOTPVerification, resendOTPForUser } from '../utils/common.js'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import sentEmail from './emailCtrl.js'
@@ -144,7 +144,7 @@ const loginUser = asyncHandler(async (req, res) => {
     }
 
     // Verify the password
-    const isPasswordValid = await UserModel.findOne({password})
+    const isPasswordValid = await UserModel.findOne({ password })
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
@@ -208,26 +208,26 @@ const logout = asyncHandler(async (req, res) => {
 
   // Return an error if no token is provided
   if (!token) {
-      return res.status(400).json({ error: "No token provided" });
+    return res.status(400).json({ error: "No token provided" });
   }
 
   // Find the user by the provided token
   const user = await UserModel.findOneAndUpdate(
-      { refreshToken: token }, // Assuming you're storing the refresh token in the `refreshToken` field
-      { refreshToken: "" },
-      { new: true }
+    { refreshToken: token }, // Assuming you're storing the refresh token in the `refreshToken` field
+    { refreshToken: "" },
+    { new: true }
   );
 
   // Return an error if no user is found with the provided token
   if (!user) {
-      return res.status(400).json({ error: "Invalid token" });
+    return res.status(400).json({ error: "Invalid token" });
   }
 
   // Clear the token from cookies
   res.clearCookie("jwt", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Use secure attribute in production
-      sameSite: 'Strict', // Use SameSite attribute for security
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Use secure attribute in production
+    sameSite: 'Strict', // Use SameSite attribute for security
   });
 
   // Send a success response for logout
@@ -273,44 +273,44 @@ const updatedUser = asyncHandler(async (req, res) => {
 //create user profile
 const createUserProfile = asyncHandler(async (req, res) => {
   try {
-      const { userId } = req.params;
-      const { email, firstName, lastName, phone, nationality, dob } = req.body;
+    const { userId } = req.params;
+    const { email, firstName, lastName, phone, nationality, dob } = req.body;
 
-      // Validate input data
-      if (!email || !firstName || !lastName || !phone || !nationality || !dob) {
-          return res.status(400).json({ error: "All fields are required" });
-      }
+    // Validate input data
+    if (!email || !firstName || !lastName || !phone || !nationality || !dob) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
 
-      // Check if the user exists in the database by userId
-      const existingUser = await UserModel.findById(userId);
-      if (!existingUser) {
-          return res.status(404).json({ error: "User not found" });
-      }
+    // Check if the user exists in the database by userId
+    const existingUser = await UserModel.findById(userId);
+    if (!existingUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-      // Check if the provided email matches the existing user's email
-      if (existingUser.email !== email) {
-          return res.status(400).json({ error: "Provided email does not match the existing user's email" });
-      }
+    // Check if the provided email matches the existing user's email
+    if (existingUser.email !== email) {
+      return res.status(400).json({ error: "Provided email does not match the existing user's email" });
+    }
 
-      // Update the user's profile with the provided data
-      existingUser.firstName = firstName;
-      existingUser.lastName = lastName;
-      existingUser.phone = phone;
-      existingUser.nationality = nationality;
-      existingUser.dob = dob;
+    // Update the user's profile with the provided data
+    existingUser.firstName = firstName;
+    existingUser.lastName = lastName;
+    existingUser.phone = phone;
+    existingUser.nationality = nationality;
+    existingUser.dob = dob;
 
-      await existingUser.save();
+    await existingUser.save();
 
-      // Return success message along with the updated user's email
-      res.json({
-          success: true,
-          message: "User profile created successfully",
-          existingUser
+    // Return success message along with the updated user's email
+    res.json({
+      success: true,
+      message: "User profile created successfully",
+      existingUser
 
-      });
+    });
   } catch (error) {
-      console.error("Error in createUserProfile:", error);
-      res.status(500).json({ message: "Internal Server Error" });
+    console.error("Error in createUserProfile:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
@@ -428,28 +428,28 @@ const createAddress = async (req, res) => {
 
 const getUserAddress = async (req, res) => {
   try {
-      // Request params se userId ko extract karte hain
-      const { userId } = req.params;
+    // Request params se userId ko extract karte hain
+    const { userId } = req.params;
 
-      // User ko find karte hain aur addresses array ko populate karte hain
-      const user = await UserModel.findById(userId)
-          .populate('addresses');
+    // User ko find karte hain aur addresses array ko populate karte hain
+    const user = await UserModel.findById(userId)
+      .populate('addresses');
 
-      // Check karte hain ki user exists karta hai ya nahi
-      if (!user) {
-          return res.status(404).json({ success: false, error: 'User not found' });
+    // Check karte hain ki user exists karta hai ya nahi
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Success response send karte hain
+    res.status(200).json({
+      success: true,
+      data: {
+        addresses: user.addresses
       }
-
-      // Success response send karte hain
-      res.status(200).json({
-          success: true,
-          data: {
-              addresses: user.addresses
-          }
-      });
+    });
   } catch (error) {
-      console.error('Error fetching user addresses:', error);
-      res.status(500).json({ success: false, error: 'Internal server error' });
+    console.error('Error fetching user addresses:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 };
 
@@ -711,266 +711,25 @@ const getWishlist = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   try {
-      // Find user by ID and populate wishlist with product details
-      const user = await UserModel.findById(id)
-          .populate({
-              path: 'wishlist',
-              select: 'title price description images category', // Specify the fields to populate
-          });
-
-      // Check if user exists
-      if (!user) {
-          return res.status(404).json({ message: "User not found" });
-      }
-
-      // Respond with the user's wishlist
-      res.json({ message: "Your wishlist is here", wishlist: user.wishlist });
-  } catch (error) {
-      console.error('Error:', error);
-      res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
-const userCart = asyncHandler(async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { quantity, productId, action } = req.body;
-
-    // Fetch the user document
-    const user = await UserModel.findById(userId);
-
-    // Check if the user exists
-    if (!user) {
-      return res.status(400).json({ status: false, message: "Invalid user ID" });
-    }
-
-    // Validate the product ID
-    if (!productId) {
-      return res.status(400).json({ status: false, message: "Invalid product ID" });
-    }
-
-    // Fetch the cart for the user
-    let cart = await CartModel.findOne({ userId });
-
-    // If cart doesn't exist, create a new one
-    if (!cart) {
-      cart = new CartModel({ userId, products: [] });
-    }
-
-    // Find the product item in the cart
-    let productItem = cart.products.find(item => item.product && item.product.equals(productId));
-
-    if (productItem) {
-      // If product found in the cart
-      if (action === 'increment') {
-        // Increment the quantity by 1
-        productItem.quantity += 1;
-      } else if (action === 'decrement') {
-        // Decrement the quantity by 1
-        if (productItem.quantity > 0) {
-          productItem.quantity -= 1;
-
-          // If quantity reaches zero, remove the product from the cart
-          if (productItem.quantity === 0) {
-            cart.products = cart.products.filter(item => item.product && !item.product.equals(productId));
-          }
-        } else {
-          return res.status(400).json({ status: false, message: "Quantity cannot be negative" });
-        }
-      } else {
-        return res.status(400).json({ status: false, message: "Invalid action" });
-      }
-    } else {
-      // If product is not found in the cart, add it as a new product
-      let product = await ProductModel.findById(productId);
-      if (!product) {
-        return res.status(400).json({ status: false, message: "Product not found" });
-      }
-
-      // Add new product to the cart with the given quantity
-      cart.products.push({ product: productId, quantity });
-
-      // Update the isInCart field to true
-      await ProductModel.findByIdAndUpdate(productId, { isInCart: true }, { new: true });
-    }
-
-    // Populate the product field in each productItem
-    await CartModel.populate(cart, { path: 'products.product', select: 'title price images isInCart' });
-
-    // Calculate the subtotal and cartTotal
-    let subTotal = 0;
-    for (let item of cart.products) {
-      if (item.product) {
-        subTotal += item.product.price * item.quantity;
-      }
-    }
-
-    // Update the subtotal and cartTotal in the cart
-    cart.subTotal = subTotal;
-    cart.cartTotal = subTotal; // Assuming cartTotal is the same as subTotal for now
-
-    // Save the updated cart
-    await cart.save();
-    user.cart.push(productId);
-
-    // Save the updated user document
-    await user.save();
-
-    // Fetch the specific product details being updated
-    const updatedProduct = await ProductModel.findById(productId);
-
-    // Return the updated cart with details for the specific product only
-    return res.status(200).json({
-      status: true,
-      message: "Product updated in cart",
-      product: {
-        title: updatedProduct.title,
-        quantity: cart.products.find(item => item.product.equals(productId)).quantity,
-        price: updatedProduct.price,
-        images: updatedProduct.images,
-        isInCart: updatedProduct.isInCart
-      },
-      subTotal,
-      cartTotal: cart.cartTotal
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ status: false, message: "Internal Server Error" });
-  }
-});
-
-
-
-
-//delete cart
-const deleteCartItem = asyncHandler(async (req, res) => {
-  try {
-      const { userId } = req.params;
-      const { productId } = req.body;
-
-      // Validate userId and productId
-      if (!userId || !productId) {
-          return res.status(400).json({ status: false, message: "Invalid userId or productId" });
-      }
-
-      // Find the user and cart
-      const user = await UserModel.findById(userId);
-      const cart = await CartModel.findOne({ userId });
-
-      if (!user || !cart) {
-          return res.status(404).json({ status: false, message: "User or cart not found" });
-      }
-
-      // Remove the product from the cart
-      const productIndex = cart.products.findIndex(item => item.product && item.product.toString() === productId);
-      
-      if (productIndex === -1) {
-          return res.status(404).json({ status: false, message: "Product not found in cart" });
-      }
-
-      // Remove the product from cart and recalculate the cart total
-      cart.products.splice(productIndex, 1);
-
-      // Calculate the new cart total and subTotal
-      let cartTotal = 0;
-      cart.products.forEach(item => {
-          if (item.product && item.quantity) {
-              const quantity = item.quantity;
-              const price = item.product.price || 0;
-              cartTotal += quantity * price;
-          }
-      });
-
-      cart.cartTotal = cartTotal;
-      cart.subTotal = cartTotal;
-
-      // Save the updated cart
-      await cart.save();
-
-      // Return a success response
-      res.status(200).json({
-          status: true,
-          message: "Product removed from cart successfully",
-          cart,
-      });
-  } catch (error) {
-      console.error("Error in deleteCartItem:", error);
-      res.status(500).json({ status: false, message: "Internal server error" });
-  }
-});
-
-
-
-//get cart 
-const getCart = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-
-  try {
-    // Find the user's cart by userId and populate the products
-    const cart = await CartModel.findOne({ userId })
+    // Find user by ID and populate wishlist with product details
+    const user = await UserModel.findById(id)
       .populate({
-        path: 'products.product',
-        select: 'title price description images category'
+        path: 'wishlist',
+        select: 'title price description images category', // Specify the fields to populate
       });
 
-    if (!cart) {
-      return res.status(200).json({
-        status: true,
-        cart: [],
-        cartTotal: 0,
-        subTotal: 0,
-      });
+    // Check if user exists
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // Filter out invalid products (null or undefined)
-    const validProducts = cart.products.filter(item => item.product !== null);
-
-    // Calculate cartTotal and subTotal
-    let cartTotal = 0;
-    let subTotal = 0;
-    const cartDetails = validProducts.map(item => {
-      const product = item.product;
-
-      // Ensure the product is not null or undefined
-      if (!product) {
-        return null;
-      }
-
-      const itemTotal = product.price * item.quantity;
-      cartTotal += itemTotal;
-      subTotal += itemTotal;
-      return {
-        product: product._id,
-        title: product.title,
-        price: product.price,
-        description: product.description,
-        images: product.images,
-        category: product.category,
-        quantity: item.quantity,
-        itemTotal,
-      };
-    }).filter(item => item !== null); // Filter out any null items
-
-    // Update the cart if necessary
-    if (cart.products.length !== validProducts.length) {
-      cart.products = validProducts;
-      await cart.save();
-    }
-
-    // Respond with the cart data
-    res.status(200).json({
-      status: true,
-      cart: cartDetails,
-      cartTotal,
-      subTotal,
-    });
+    // Respond with the user's wishlist
+    res.json({ message: "Your wishlist is here", wishlist: user.wishlist });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ status: false, error: 'Internal server error' });
+    console.error('Error:', error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
-
 
 
 const addToWishlist = asyncHandler(async (req, res) => {
@@ -1050,7 +809,7 @@ const removeFromWishlist = asyncHandler(async (req, res) => {
         new: true,
       }
     );
-    
+
     // Check if the user exists and the update was successful
     if (user) {
       res.status(200).json({ status: true, message: "Product removed from wishlist", user });
@@ -1065,34 +824,8 @@ const removeFromWishlist = asyncHandler(async (req, res) => {
 });
 
 
-//empty wishlist
-const createEmptyWishlist = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  try {
-    const user = await UserModel.findById(id);
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    if (!user.wishlist || user.wishlist.length === 0) {
-      // If wishlist doesn't exist or is empty, create an empty wishlist
-      user.wishlist = [];
-      await user.save();
-      return res.status(200).json({ message: 'Empty wishlist created successfully', user });
-    } else {
-      // Wishlist already exists
-      return res.status(400).json({ error: 'Wishlist already exists for the user' });
-    }
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-
 //resend otp
-const resendOTPForUsers = asyncHandler(async(req, res) => {
+const resendOTPForUsers = asyncHandler(async (req, res) => {
   try {
     // Extract user's email from the request body
     const { email } = req.body;
@@ -1139,13 +872,9 @@ export {
   resetPassword,
   getWishlist,
   saveAddress,
-  userCart,
-  getCart,
   verifyEmail,
   createShippingAddress,
   addToWishlist,
-  deleteCartItem,
-  createEmptyWishlist,
   createAddress,
   updateAddress,
   getUserAddress,
@@ -1153,5 +882,5 @@ export {
   createUserProfile,
   getUserProfile,
   resendOTPForUsers,
-  
+
 };

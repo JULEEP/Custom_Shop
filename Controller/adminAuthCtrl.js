@@ -4,7 +4,7 @@ import validator from "validator"
 import ProductModel from "../Model/Product.js"
 import generateToken from "../config/jwtToken.js"
 import generateRefreshToken from "../config/refreshtoken.js"
-import Role from '../Model/Role.js'
+
 
 const adminRegistration = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body
