@@ -1,8 +1,6 @@
 import ProductModel from '../Model/Product.js'
 import customizedModel from '../Model/CustomizedProduct.js';
 import asyncHandler from 'express-async-handler'
-import slugify from 'slugify'
-
 //create a product
 
 const createProduct = asyncHandler(async (req, res) => {
