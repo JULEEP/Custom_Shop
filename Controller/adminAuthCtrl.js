@@ -39,34 +39,35 @@ const adminRegistration = asyncHandler(async (req, res) => {
 
 const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  // check if user exists or not
+
+  // Check if admin exists
   const findAdmin = await AdminModel.findOne({ email });
-  if (findAdmin && (await findAdmin.isPasswordMatched(password))) {
-    const refreshToken = await generateRefreshToken(findAdmin?._id);
-    const updateadmin = await AdminModel.findByIdAndUpdate(
-      findAdmin.id,
-      {
-        refreshToken: refreshToken,
-      },
+  if (findAdmin && password === findAdmin.password) { // Direct comparison
+    const refreshToken = await generateRefreshToken(findAdmin._id);
+    await AdminModel.findByIdAndUpdate(
+      findAdmin._id,
+      { refreshToken },
       { new: true }
     );
+
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      maxAge: 72 * 60 * 60 * 1000,
+      maxAge: 72 * 60 * 60 * 1000, // 3 days
     });
+
     res.json({
-      _id: findAdmin?._id,
-      firstName: findAdmin?.firstName,
-      lastName: findAdmin?.lastName,
-      email: findAdmin?.email,
-      mobile: findAdmin?.mobile,
-      token: generateToken(findAdmin?._id),
+      _id: findAdmin._id,
+      firstName: findAdmin.firstName,
+      lastName: findAdmin.lastName,
+      email: findAdmin.email,
+      mobile: findAdmin.mobile,
+      token: generateToken(findAdmin._id),
     });
   } else {
-    //throw new Error("Invalid Credentials");
-    return res.json({ message: "Invalid Credentials" })
+    return res.json({ message: "Invalid Credentials" });
   }
-})
+});
+
 
 const adminLogout = asyncHandler(async (req, res) => {
   try {

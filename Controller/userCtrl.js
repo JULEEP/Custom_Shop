@@ -665,25 +665,46 @@ const updatePassword = asyncHandler(async (req, res) => {
 });
 
 
-//forgot password
+// Reset password (updating the password after validation)
 const forgotPasswordToken = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-  const user = await UserModel.findOne({ email });
-  if (!user) throw new Error("User not found with this email");
+  const { token } = req.params; // Password reset token from the URL
+  const { email, newPassword, confirmPassword } = req.body; // Email, new password, and confirm password from request body
+
+  // Check if the new password and confirm password match
+  if (newPassword !== confirmPassword) {
+    return res.status(400).json({ message: 'Passwords do not match' });
+  }
+
   try {
-    const token = await user.createPasswordResetToken();
-    await user.save();
-    const resetURL = `Hi, Please follow this link to reset Your Password. This link is valid till 10 minutes from now. <a href='http://localhost:4000/api/users/reset-password/${token}'>Click Here</>`;
-    const data = {
-      to: user.email,
-      text: "Hey user",
-      subject: "Forgot password link",
-      htm: resetURL,
+    // Decode the token and find the user associated with it
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Assuming JWT is used for token verification
+    const user = await UserModel.findOne({ email }); // Find the user using email (email entered by user)
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found with this email' });
     }
-    sentEmail(data)
-    res.json(token)
+
+    // Check if token is valid and associated with the user
+    if (user._id.toString() !== decoded.id) {
+      return res.status(400).json({ message: 'Invalid token for this user' });
+    }
+
+    // Check if token is expired
+    if (Date.now() > user.passwordResetExpires) {
+      return res.status(400).json({ message: 'Password reset link has expired' });
+    }
+
+    // Update the user's password
+    user.password = newPassword; // Set the new password (ensure it's hashed)
+    user.passwordResetToken = undefined; // Clear the reset token
+    user.passwordResetExpires = undefined; // Clear the expiry time
+
+    // Save the updated user with the new password
+    await user.save();
+
+    res.status(200).json({ message: 'Your password has been successfully updated' });
   } catch (error) {
-    throw new Error(error);
+    res.status(500).json({ message: 'Error resetting password', error: error.message });
   }
 });
 
@@ -856,6 +877,259 @@ const resendOTPForUsers = asyncHandler(async (req, res) => {
   }
 })
 
+const userCart = asyncHandler(async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { quantity, productId, action } = req.body;
+
+    // Fetch the user document
+    const user = await UserModel.findById(userId);
+
+    // Check if the user exists
+    if (!user) {
+      return res.status(400).json({ status: false, message: "Invalid user ID" });
+    }
+
+    // Validate the product ID
+    if (!productId) {
+      return res.status(400).json({ status: false, message: "Invalid product ID" });
+    }
+
+    // Fetch the cart for the user
+    let cart = await CartModel.findOne({ userId });
+
+    // If cart doesn't exist, create a new one
+    if (!cart) {
+      cart = new CartModel({ userId, products: [] });
+    }
+
+    // Find the product item in the cart
+    let productItem = cart.products.find(item => item.product && item.product.equals(productId));
+
+    if (productItem) {
+      // If product found in the cart
+      if (action === 'increment') {
+        // Increment the quantity by 1
+        productItem.quantity += 1;
+      } else if (action === 'decrement') {
+        // Decrement the quantity by 1
+        if (productItem.quantity > 0) {
+          productItem.quantity -= 1;
+
+          // If quantity reaches zero, remove the product from the cart
+          if (productItem.quantity === 0) {
+            cart.products = cart.products.filter(item => item.product && !item.product.equals(productId));
+          }
+        } else {
+          return res.status(400).json({ status: false, message: "Quantity cannot be negative" });
+        }
+      } else {
+        return res.status(400).json({ status: false, message: "Invalid action" });
+      }
+    } else {
+      // If product is not found in the cart, add it as a new product
+      let product = await ProductModel.findById(productId);
+      if (!product) {
+        return res.status(400).json({ status: false, message: "Product not found" });
+      }
+
+      // Add new product to the cart with the given quantity
+      cart.products.push({ product: productId, quantity });
+
+      // Update the isInCart field to true
+      await ProductModel.findByIdAndUpdate(productId, { isInCart: true }, { new: true });
+    }
+
+    // Populate the product field in each productItem
+    await CartModel.populate(cart, { path: 'products.product', select: 'title price images isInCart' });
+
+    // Calculate the subtotal and cartTotal
+    let subTotal = 0;
+    for (let item of cart.products) {
+      if (item.product) {
+        subTotal += item.product.price * item.quantity;
+      }
+    }
+
+    // Update the subtotal and cartTotal in the cart
+    cart.subTotal = subTotal;
+    cart.cartTotal = subTotal; // Assuming cartTotal is the same as subTotal for now
+
+    // Save the updated cart
+    await cart.save();
+    user.cart.push(productId);
+
+    // Save the updated user document
+    await user.save();
+
+    // Fetch the specific product details being updated
+    const updatedProduct = await ProductModel.findById(productId);
+
+    // Return the updated cart with details for the specific product only
+    return res.status(200).json({
+      status: true,
+      message: "Product updated in cart",
+      product: {
+        title: updatedProduct.title,
+        quantity: cart.products.find(item => item.product.equals(productId)).quantity,
+        price: updatedProduct.price,
+        images: updatedProduct.images,
+        isInCart: updatedProduct.isInCart
+      },
+      subTotal,
+      cartTotal: cart.cartTotal
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: false, message: "Internal Server Error" });
+  }
+});
+
+//delete cart
+const deleteCartItem = asyncHandler(async (req, res) => {
+  try {
+      const { userId } = req.params;
+      const { productId } = req.body;
+
+      // Validate userId and productId
+      if (!userId || !productId) {
+          return res.status(400).json({ status: false, message: "Invalid userId or productId" });
+      }
+
+      // Find the user and cart
+      const user = await UserModel.findById(userId);
+      const cart = await CartModel.findOne({ userId });
+
+      if (!user || !cart) {
+          return res.status(404).json({ status: false, message: "User or cart not found" });
+      }
+
+      // Remove the product from the cart
+      const productIndex = cart.products.findIndex(item => item.product && item.product.toString() === productId);
+      
+      if (productIndex === -1) {
+          return res.status(404).json({ status: false, message: "Product not found in cart" });
+      }
+
+      // Remove the product from cart and recalculate the cart total
+      cart.products.splice(productIndex, 1);
+
+      // Calculate the new cart total and subTotal
+      let cartTotal = 0;
+      cart.products.forEach(item => {
+          if (item.product && item.quantity) {
+              const quantity = item.quantity;
+              const price = item.product.price || 0;
+              cartTotal += quantity * price;
+          }
+      });
+
+      cart.cartTotal = cartTotal;
+      cart.subTotal = cartTotal;
+
+      // Save the updated cart
+      await cart.save();
+
+      // Return a success response
+      res.status(200).json({
+          status: true,
+          message: "Product removed from cart successfully",
+          cart,
+      });
+  } catch (error) {
+      console.error("Error in deleteCartItem:", error);
+      res.status(500).json({ status: false, message: "Internal server error" });
+  }
+});
+
+
+
+//get cart 
+const getCart = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Find the user's cart by userId and populate the products
+    const cart = await CartModel.findOne({ userId })
+      .populate({
+        path: 'products.product',
+        select: 'title price description images category'
+      });
+
+    if (!cart) {
+      return res.status(200).json({
+        status: true,
+        cart: [],
+        cartTotal: 0,
+        subTotal: 0,
+      });
+    }
+
+    // Filter out invalid products (null or undefined)
+    const validProducts = cart.products.filter(item => item.product !== null);
+
+    // Calculate cartTotal and subTotal
+    let cartTotal = 0;
+    let subTotal = 0;
+    const cartDetails = validProducts.map(item => {
+      const product = item.product;
+
+      // Ensure the product is not null or undefined
+      if (!product) {
+        return null;
+      }
+
+      const itemTotal = product.price * item.quantity;
+      cartTotal += itemTotal;
+      subTotal += itemTotal;
+      return {
+        product: product._id,
+        title: product.title,
+        price: product.price,
+        description: product.description,
+        images: product.images,
+        category: product.category,
+        quantity: item.quantity,
+        itemTotal,
+      };
+    }).filter(item => item !== null); // Filter out any null items
+
+    // Update the cart if necessary
+    if (cart.products.length !== validProducts.length) {
+      cart.products = validProducts;
+      await cart.save();
+    }
+
+    // Respond with the cart data
+    res.status(200).json({
+      status: true,
+      cart: cartDetails,
+      cartTotal,
+      subTotal,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: false, error: 'Internal server error' });
+  }
+});
+
+
+const getShippingAddress = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const shippingAddress = await ShippingAddressModel.findOne({ userId });
+    if (!shippingAddress) {
+      return res.status(404).json({ status: false, message: "Shipping address not found" });
+    }
+    res.status(200).json({ status: true, message: "Shipping address retrieved successfully", shippingAddress });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ status: false, message: "Internal Server Error" });
+  }
+});
+
+
 export {
   createUser,
   loginUser,
@@ -882,5 +1156,5 @@ export {
   createUserProfile,
   getUserProfile,
   resendOTPForUsers,
-
+  userCart,
 };

@@ -1,4 +1,5 @@
 import ProductModel from '../Model/Product.js'
+import customizedModel from '../Model/CustomizedProduct.js';
 import asyncHandler from 'express-async-handler'
 import slugify from 'slugify'
 
@@ -507,6 +508,45 @@ const getTopSellingProducts = asyncHandler(async (req, res) => {
   }
 });
 
+
+const saveCustomizedProduct = async (req, res) => {
+  try {
+    const { productId, customImages, size, quantity } = req.body;
+    const userId = req.user._id;
+
+    // Validate required fields
+    if (!productId || !customImages || !customImages.front || !customImages.back || !size || !quantity) {
+      return res.status(400).json({ error: 'Product ID, custom images for both sides, size, and quantity are required' });
+    }
+
+    // Create a new customized product entry
+    const customizedProduct = new CustomizedProduct({
+      userId,
+      productId,
+      customImages, // Store both front and back images
+      size,
+      quantity
+    });
+
+    // Save the customized product to the database
+    await customizedProduct.save();
+
+    // Send a success response
+    res.status(201).json({
+      success: true,
+      message: 'Customized product saved successfully',
+      data: customizedProduct
+    });
+  } catch (error) {
+    console.error('Error saving customized product:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error saving customized product',
+      error: error.message
+    });
+  }
+};
+
 export {
   createProduct,
   getAllProduct,
@@ -519,5 +559,6 @@ export {
   getProductCount,
   bestSellerProducts,
   searchByKeyword,
-  getTopSellingProducts
+  getTopSellingProducts,
+  saveCustomizedProduct
 }
