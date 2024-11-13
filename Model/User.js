@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,
     },
-    phone: {
+    phoneNumber: {
       type: String,
     },
     nationality: {

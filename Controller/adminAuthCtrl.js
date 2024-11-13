@@ -7,20 +7,17 @@ import generateRefreshToken from "../config/refreshtoken.js"
 
 
 const adminRegistration = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body
-  if (!validator.isEmail(email)) {
-    return res.status(400).json({ error: "Invalid email" });
-  }
+  const { firstName, lastName, email, password, phoneNumber } = req.body
 
   const admin = await AdminModel.findOne({ email: email })
   if (admin) {
     return res.status(409).json({ status: "failed", message: "Email or phone already exists" });
   }
 
-  if (name && email && password) {
+  if (firstName && email && password) {
     try {
       const doc = new AdminModel({
-        name: name,
+        firstName: firstName,
         email: email,
         password: password,
       });
@@ -38,7 +35,7 @@ const adminRegistration = asyncHandler(async (req, res) => {
 })
 
 const adminLogin = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body; 1`1`
 
   // Check if admin exists
   const findAdmin = await AdminModel.findOne({ email });

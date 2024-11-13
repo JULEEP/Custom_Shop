@@ -27,12 +27,8 @@ const tarnsporter = nodemailer.createTransport({
 
 const createUser = asyncHandler(async (req, res) => {
   try {
-    const { fullName, email, password } = req.body;
+    const { fullName, lastName,  email, password, phoneNumber } = req.body;
 
-    // Validation
-    if (!fullName || !email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
-    }
 
     // Check if email already exists
     const existingUser = await UserModel.findOne({ email });
@@ -50,6 +46,8 @@ const createUser = asyncHandler(async (req, res) => {
     // Save user data along with OTP and expiry time
     const user = new UserModel({
       fullName,
+      lastName,
+      phoneNumber,
       email,
       password,
       otp,
