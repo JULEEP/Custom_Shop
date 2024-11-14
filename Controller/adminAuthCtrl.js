@@ -35,7 +35,7 @@ const adminRegistration = asyncHandler(async (req, res) => {
 })
 
 const adminLogin = asyncHandler(async (req, res) => {
-  const { email, password } = req.body; 1`1`
+  const { email, password } = req.body;
 
   // Check if admin exists
   const findAdmin = await AdminModel.findOne({ email });
