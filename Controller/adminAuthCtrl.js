@@ -37,32 +37,41 @@ const adminRegistration = asyncHandler(async (req, res) => {
 const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+  // Input validation (no need to do frontend validation)
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and Password are required' });
+  }
+
   // Check if admin exists
   const findAdmin = await AdminModel.findOne({ email });
-  if (findAdmin && password === findAdmin.password) { // Direct comparison
-    const refreshToken = await generateRefreshToken(findAdmin._id);
-    await AdminModel.findByIdAndUpdate(
-      findAdmin._id,
-      { refreshToken },
-      { new: true }
-    );
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      maxAge: 72 * 60 * 60 * 1000, // 3 days
-    });
-
-    res.json({
-      _id: findAdmin._id,
-      firstName: findAdmin.firstName,
-      lastName: findAdmin.lastName,
-      email: findAdmin.email,
-      mobile: findAdmin.mobile,
-      token: generateToken(findAdmin._id),
-    });
-  } else {
-    return res.json({ message: "Invalid Credentials" });
+  if (!findAdmin) {
+    return res.status(401).json({ message: 'Invalid Credentials' });
   }
+
+  // Generate tokens
+  const refreshToken = generateRefreshToken(findAdmin._id);
+  await AdminModel.findByIdAndUpdate(
+    findAdmin._id,
+    { refreshToken },
+    { new: true }
+  );
+
+  // Set refresh token in cookie
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // Use 'secure' flag in production (HTTPS)
+    maxAge: 72 * 60 * 60 * 1000, // 3 days
+  });
+
+  // Send response with admin details and access token
+  res.json({
+    _id: findAdmin._id,
+    firstName: findAdmin.firstName,
+    lastName: findAdmin.lastName,
+    email: findAdmin.email,
+    mobile: findAdmin.mobile,
+    token: generateToken(findAdmin._id),
+  });
 });
 
 
