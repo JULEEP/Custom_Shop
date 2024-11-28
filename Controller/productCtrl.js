@@ -25,54 +25,23 @@ const createProduct = asyncHandler(async (req, res) => {
       available,
     } = req.body;
 
-    // Validation
-    if (
-      !title ||
-      !description ||
-      !price ||
-      !category ||
-      !brand ||
-      !bulletPoint ||
-      !modelNumber ||
-      !style ||
-      !numberOfItems ||
-      !itemTypeName ||
-      !numberOfPieces ||
-      !productBenefits ||
-      !color ||
-      !size ||
-      !available
-    ) {
-      return res.status(400).send({ error: "All fields are required" });
-    }
+    // Ensure images are present in the request
+    let images = req.files ? req.files : [];
 
-    let images = req.files;
-
-    // If single image, convert it to an array
+    // If only one image is uploaded, make it an array for consistency
     if (!Array.isArray(images)) {
       images = [images];
     }
 
-    // Check each image size
-    for (const image of images) {
-      if (image.size > 1000000) {
-        return res.status(400).send({ error: "Images should be less than 1MB" });
-      }
-    }
+    // Process images to store only the file paths/URLs
+    const imagePaths = images.map(file => `/uploads/${file.filename}`);  // Store the relative file path or URL
 
-    const uploadedImageUrls = [];
-
-    // Convert each image to base64 and save it in an array
-    for (const image of images) {
-      const imageData = image.buffer.toString('base64'); // Convert image buffer to base64
-      uploadedImageUrls.push(`data:${image.mimetype};base64,${imageData}`);
-    }
-
+    // Create the product object
     const product = new ProductModel({
       title,
       description,
       price,
-      images: uploadedImageUrls, // Save array of base64 image data
+      images: imagePaths, // Save array of image paths
       category,
       stock,
       discountPercentage,
@@ -87,19 +56,20 @@ const createProduct = asyncHandler(async (req, res) => {
       color,
       size,
       available,
-      createdDate: Date.now(), // Set createdDate to current date/time
-      slug: slugify(title)
+      createdDate: Date.now(),
     });
 
-    // Calculate discountPrice
+    // Calculate discountPrice if discountPercentage is provided
     if (discountPercentage) {
       product.discountPrice = Math.round(product.price * (1 - product.discountPercentage / 100));
     }
 
-    if (product.quantity === 0) {
+    // Check if the product is out of stock
+    if (product.stock === 0) {
       return res.status(400).json({ error: 'Product is out of stock' });
     }
 
+    // Save product to the database
     await product.save();
 
     res.status(201).send({
@@ -108,7 +78,7 @@ const createProduct = asyncHandler(async (req, res) => {
       product,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send({
       success: false,
       error: error.message,
@@ -116,6 +86,8 @@ const createProduct = asyncHandler(async (req, res) => {
     });
   }
 });
+
+
 
 
 const getAllProduct = asyncHandler(async (req, res) => {

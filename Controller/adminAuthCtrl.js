@@ -7,32 +7,57 @@ import generateRefreshToken from "../config/refreshtoken.js"
 
 
 const adminRegistration = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, password, phoneNumber } = req.body
+  const { name, email, password, role } = req.body;
 
-  const admin = await AdminModel.findOne({ email: email })
+  // Split the name into first and last name
+  const [firstName, lastName] = name.split(" "); // Assuming 'name' is the full name (first + last)
+
+  // Validate input fields
+  if (!firstName || !lastName || !email || !password || !role) {
+    return res.status(400).json({
+      status: "failed",
+      message: "Please fill all the fields",
+    });
+  }
+
+  // Check if an admin with the given email already exists
+  const admin = await AdminModel.findOne({ email });
   if (admin) {
-    return res.status(409).json({ status: "failed", message: "Email or phone already exists" });
+    return res.status(409).json({
+      status: "failed",
+      message: "Email already exists",
+    });
   }
 
-  if (firstName && email && password) {
-    try {
-      const doc = new AdminModel({
-        firstName: firstName,
-        email: email,
-        password: password,
-      });
-      await doc.save();
-      const saved_admin = await AdminModel.findOne({ email: email }).select("-password")
+  try {
+    // Create a new admin document
+    const doc = new AdminModel({
+      firstName,
+      lastName,
+      email,
+      password,
+      role, // Adding role field
+    });
 
-      return res.status(201).json({ message: "Registration Successful", data: saved_admin })
+    // Save the new admin to the database
+    await doc.save();
 
-    } catch (error) {
-      return res.status(500).json({ status: "failed", message: "Unable to register", error: error.message });
-    }
-  } else {
-    res.status(400).json({ message: "Please fill all the fields" });
+    // Return the newly created admin, excluding the password field
+    const savedAdmin = await AdminModel.findOne({ email }).select("-password");
+
+    return res.status(201).json({
+      message: "Registration Successful",
+      data: savedAdmin,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "failed",
+      message: "Unable to register",
+      error: error.message,
+    });
   }
-})
+});
+
 
 const adminLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;

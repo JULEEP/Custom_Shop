@@ -13,9 +13,22 @@ import {
      searchByKeyword,
 } from '../Controller/productCtrl.js';
 import { isUser, isAdmin } from '../Middlewares/authMiddleware.js'
+import multer from 'multer';
+
+// Set up storage for multer (saving images to a directory)
+const storage = multer.diskStorage({
+     destination: (req, file, cb) => {
+       cb(null, 'uploads/'); // save in 'uploads' folder
+     },
+     filename: (req, file, cb) => {
+       cb(null, Date.now() + '-' + file.originalname); // create a unique filename
+     },
+   });
+   
+   const upload = multer({ storage: storage });
 
 
-router.post('/create-product', isAdmin, createProduct)
+router.post("/create-product", upload.array("images", 5), createProduct);
 router.get('/', getAllProduct)
 router.get('/best-seller', bestSellerProducts)
 router.get('/:id', getOneProduct)

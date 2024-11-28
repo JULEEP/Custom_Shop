@@ -34,7 +34,7 @@ const productSchema = new Schema({
   soldBy: { type: String },
   stock: { type: Number, default: 0, min: [0, "Stock cannot be negative"] },
   images: [{ type: String }],
-  color: [{ name: String, url: String }],
+  color: [{ type: String}],
   tags: [String],
   totalrating: { type: Number, default: 0 },
   discountPercentage: {

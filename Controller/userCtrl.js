@@ -141,20 +141,10 @@ const loginUser = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Verify the password
-    const isPasswordValid = await UserModel.findOne({ password })
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-
     // Generate refresh token
     const refreshToken = generateRefreshToken(user._id);
 
-    // Update user's refresh token in the database
-    user.refreshToken = refreshToken;
-    await user.save();
-
-    // Set refresh token as an HTTP-only cookie
+    // Set refresh token in HTTP-only cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", // Use secure attribute in production
@@ -165,21 +155,19 @@ const loginUser = asyncHandler(async (req, res) => {
     // Generate an access token
     const accessToken = generateToken(user._id);
 
-    // Return user data and access token
+    // Return user data, access token, and refresh token
     res.json({
       _id: user._id,
       email: user.email,
+      userId: user._id,  // Send userId to frontend
       token: accessToken,
-      refreshToken, // You can choose whether to include the refresh token in the response
+      refreshToken, // Optionally include refresh token in the response
     });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
-
 });
-
-
 // handle refresh token
 const handleRefreshToken = asyncHandler(async (req, res) => {
   const cookie = req.cookies;
